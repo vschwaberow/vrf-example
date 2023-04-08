@@ -58,8 +58,8 @@ fn main() -> Result<(), Box<dyn Error>> {
     let secret_key = Scalar::random(&mut rng);
     let (vrf_output, vrf_proof) = generate_vrf(&secret_key);
     
-    println!("VRF output: {:?}", vrf_output);
-    println!("VRF proof: {:?}", vrf_proof);
+    println!("VRF output: {:?}", hex::encode(&vrf_output));
+    println!("VRF proof: {:?}", hex::encode(&vrf_proof));
     
     let is_valid = verify_vrf(&secret_key, &vrf_output, &vrf_proof);
     println!("Verification result: {}", is_valid);
