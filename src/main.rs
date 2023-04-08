@@ -23,11 +23,22 @@ use curve25519_dalek::{scalar::Scalar, constants};
 use sha2::{Sha256, Digest};
 use std::error::Error;
 
-fn main() -> Result<(), Box<dyn Error>>{
-    
-    let mut rng = OsRng;
-    let secret_key = Scalar::random(&mut rng);
+fn verify_vrf(secret_key: &Scalar, vrf_output: &[u8], vrf_proof: &[u8]) -> bool {
+    let g = &constants::RISTRETTO_BASEPOINT_POINT;
+    let h = g * secret_key;
 
+    let mut hasher = Sha256::new();
+    hasher.update(h.compress().as_bytes());
+    let expected_vrf_output = hasher.finalize();
+
+    let mut proof = Sha256::new();
+    proof.update(&expected_vrf_output);
+    let expected_vrf_proof = proof.finalize();
+
+    vrf_output == expected_vrf_output.as_slice() && vrf_proof == expected_vrf_proof.as_slice()
+}
+
+fn generate_vrf(secret_key: &Scalar) -> (Vec<u8>, Vec<u8>) {
     let g = &constants::RISTRETTO_BASEPOINT_POINT;
     let h = g * secret_key;
 
@@ -36,12 +47,22 @@ fn main() -> Result<(), Box<dyn Error>>{
     let vrf_out = hasher.finalize();
 
     let mut proof = Sha256::new();
-    proof.update(vrf_out);
-
+    proof.update(&vrf_out);
     let vrf_proof = proof.finalize();
 
-    println!("VRF output: {:?}", vrf_out);
-    println!("VRF proof: {:?}", vrf_proof);  
-    Ok(())
+    (vrf_out.to_vec(), vrf_proof.to_vec())
+}
 
+fn main() -> Result<(), Box<dyn Error>> {
+    let mut rng = OsRng;
+    let secret_key = Scalar::random(&mut rng);
+    let (vrf_output, vrf_proof) = generate_vrf(&secret_key);
+    
+    println!("VRF output: {:?}", vrf_output);
+    println!("VRF proof: {:?}", vrf_proof);
+    
+    let is_valid = verify_vrf(&secret_key, &vrf_output, &vrf_proof);
+    println!("Verification result: {}", is_valid);
+    
+    Ok(())
 }
